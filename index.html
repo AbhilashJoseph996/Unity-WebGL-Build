@@ -8,56 +8,26 @@
     <link rel="stylesheet" href="TemplateData/style.css">
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
-    <video id="camera-feed" autoplay muted></video>
-
-   <video id="camera-feed" autoplay muted></video>
-
-    <!-- Add your custom JavaScript code -->
     <script>
-        // Function to send a message to Unity
-        function SendMessageToUnity(message) {
-            if (typeof unityInstance !== 'undefined') {
-                unityInstance.SendMessage('Player', 'OnFaceDetected', message);
-            }
+      // Function to send a message to Unity
+      function SendMessageToUnity(message) {
+        if (typeof unityInstance !== 'undefined') {
+          unityInstance.SendMessage('FaceDetectionManager', 'OnFaceDetected', message);
         }
+      }
 
-        // Start camera tracking
-        function StartCameraTracking() {
-            const video = document.getElementById('camera-feed');
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                    video.srcObject = stream;
-                    video.play();
-
-                    const tracker = new tracking.ObjectTracker('face');
-                    tracker.setInitialScale(4);
-                    tracker.setStepSize(2);
-                    tracker.setEdgesDensity(0.1);
-
-                    tracking.track(video, tracker);
-
-                    tracker.on('track', (event) => {
-                        context.clearRect(0, 0, canvas.width, canvas.height);
-
-                        if (event.data.length > 0) {
-                            // Face detected
-                            SendMessageToUnity('Face Detected');
-                        } else {
-                            // No face detected
-                            SendMessageToUnity('No Face Detected');
-                        }
-                    });
-                })
-                .catch((error) => {
-                    console.error('Error accessing camera:', error);
-                });
-        }
-
-        // Start camera tracking when the page loads
-        window.onload = StartCameraTracking;
+      // Initialize MindAR
+      document.addEventListener('DOMContentLoaded', () => {
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('mindar-face-target-found', (event) => {
+          console.log('Face detected');
+          SendMessageToUnity('Face Detected'); // Send message to Unity
+        });
+        scene.addEventListener('mindar-face-target-lost', (event) => {
+          console.log('Face lost');
+          SendMessageToUnity('Face Lost'); // Send message to Unity
+        });
+      });
     </script>
   </head>
   <body>
@@ -176,18 +146,11 @@
       document.body.appendChild(script);
 
     </script>
-     <a-scene
-     mindar-face
-     embedded
-     color-space="sRGB"
-     renderer="colorManagement: true, physicallyCorrectLights"
-     vr-mode-ui="enabled: false"
-     device-orientation-permission-ui="enabled: false"
-  >
-     <a-camera active="false" position="0 0 0"></a-camera>
-     <a-entity mindar-face-target="anchorIndex: 1">
-       <a-text value="Face Detected" color="green" position="0 0.1 0" anchor="center"></a-text>
-     </a-entity>
-   </a-scene>
+     <a-scene mindar-face embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      <a-camera active="false" position="0 0 0"></a-camera>
+      <a-entity mindar-face-target="anchorIndex: 1">
+        <a-text value="Face Detected" color="green" position="0 0.1 0" anchor="center"></a-text>
+      </a-entity>
+    </a-scene>
   </body>
 </html>
