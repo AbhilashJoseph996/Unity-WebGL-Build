@@ -26,11 +26,13 @@
         sceneEl.addEventListener("targetFound", event => {
           console.log("target found");
           unityInstance.SendMessage('Player', 'OnFaceDetected', FaceDetected);
+          console.log("target found");
         });
 	// detect target lost
         sceneEl.addEventListener("targetLost", event => {
           console.log("target lost");
             unityInstance.SendMessage('Player', 'OnFaceLost', FaceLost);
+            console.log("target lost"); 
         });
 	// arError event triggered when something went wrong. Mostly browser compatbility issue
         sceneEl.addEventListener("arError", (event) => {
