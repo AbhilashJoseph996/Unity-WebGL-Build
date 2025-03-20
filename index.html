@@ -9,6 +9,8 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
     <script>
+      var unityInstance; // Declare globally
+
       document.addEventListener("DOMContentLoaded", function () {
         const sceneEl = document.querySelector("a-scene");
         let arSystem;
@@ -17,30 +19,35 @@
           arSystem = sceneEl.systems["mindar-face-system"];
         });
 
-        // Detect target found
-        sceneEl.addEventListener("targetFound", (event) => {
-          console.log("target found");
-          if (typeof unityInstance !== "undefined") {
-            unityInstance.SendMessage("Player", "OnFaceDetected", "FaceDetected");
-          } else {
-            console.error("Unity instance is not initialized yet.");
-          }
-        });
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+            document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+          })
+            .then((instance) => {
+              unityInstance = instance; // Assign Unity instance
+              document.querySelector("#unity-loading-bar").style.display = "none";
+              document.querySelector("#unity-fullscreen-button").onclick = () => {
+                unityInstance.SetFullscreen(1);
+              };
 
-        // Detect target lost
-        sceneEl.addEventListener("targetLost", (event) => {
-          console.log("target lost");
-          if (typeof unityInstance !== "undefined") {
-            unityInstance.SendMessage("Player", "OnFaceLost", "FaceLost");
-          } else {
-            console.error("Unity instance is not initialized yet.");
-          }
-        });
+              // Add event listeners after Unity is ready
+              sceneEl.addEventListener("targetFound", (event) => {
+                console.log("target found");
+                unityInstance.SendMessage("Player", "OnFaceDetected", "FaceDetected");
+              });
 
-        // Handle AR errors
-        sceneEl.addEventListener("arError", (event) => {
-          console.log("ar error");
-        });
+              sceneEl.addEventListener("targetLost", (event) => {
+                console.log("target lost");
+                unityInstance.SendMessage("Player", "OnFaceLost", "FaceLost");
+              });
+            })
+            .catch((message) => {
+              alert(message);
+            });
+        };
+        document.body.appendChild(script);
       });
     </script>
   </head>
@@ -60,75 +67,6 @@
         <div id="unity-build-title">FaceTrackingUnity</div>
       </div>
     </div>
-    <script>
-      var canvas = document.querySelector("#unity-canvas");
-
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? "block" : "none";
-        }
-        var div = document.createElement("div");
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == "error") div.style = "background: red; padding: 10px;";
-        else {
-          if (type == "warning") div.style = "background: yellow; padding: 10px;";
-          setTimeout(function () {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
-
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/WebGL Builds.loader.js";
-      var config = {
-        arguments: [],
-        dataUrl: buildUrl + "/WebGL Builds.data.unityweb",
-        frameworkUrl: buildUrl + "/WebGL Builds.framework.js.unityweb",
-        codeUrl: buildUrl + "/WebGL Builds.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "FaceTrackingUnity",
-        productVersion: "0.1.0",
-        showBanner: unityShowBanner,
-      };
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement("meta");
-        meta.name = "viewport";
-        meta.content = "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
-        document.getElementsByTagName("head")[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
-      }
-
-      document.querySelector("#unity-loading-bar").style.display = "block";
-
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-        })
-          .then((instance) => {
-            unityInstance = instance; // Assign Unity instance
-            document.querySelector("#unity-loading-bar").style.display = "none";
-            document.querySelector("#unity-fullscreen-button").onclick = () => {
-              unityInstance.SetFullscreen(1);
-            };
-          })
-          .catch((message) => {
-            alert(message);
-          });
-      };
-      document.body.appendChild(script);
-    </script>
     <a-scene mindar-face="autoStart: true" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-camera active="false" position="0 0 0" look-controls="false"></a-camera>
       <a-entity mindar-face-target="anchorIndex: 1">
